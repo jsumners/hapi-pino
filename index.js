@@ -3,6 +3,13 @@
 const pino = require('pino')
 
 const levels = ['trace', 'debug', 'info', 'warn', 'error']
+module.exports.levelTags = {
+  trace: 'trace',
+  debug: 'debug',
+  info: 'info',
+  warn: 'warn',
+  error: 'error'
+}
 
 function register (server, options, next) {
   options.serializers = options.serializers || {}
@@ -27,12 +34,20 @@ function register (server, options, next) {
     logger = pino(options, stream)
   }
 
-  const tagToLevels = options.tags || {}
+  const tagToLevels = Object.assign({}, module.exports.levelTags, options.tags)
   const allTags = options.allTags || 'info'
 
   const validTags = Object.keys(tagToLevels).filter((key) => levels.indexOf(tagToLevels[key]) < 0).length === 0
   if (!validTags || allTags && levels.indexOf(allTags) < 0) {
     return next(new Error('invalid tag levels'))
+  }
+
+  let stream = options.stream || process.stdout
+
+  if (options.prettyPrint) {
+    let pretty = pino.pretty()
+    pretty.pipe(stream)
+    stream = pretty
   }
 
   // expose logger as 'server.app.logger'
